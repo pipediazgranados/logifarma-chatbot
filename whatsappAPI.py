@@ -23,8 +23,6 @@ def _post(payload:dict) -> dict:
         raise RuntimeError(data)
     return data
 
-
-
 def send_text(to: str, body: str, preview_url: bool = False) -> str:
     if not to:
         log.warning("send_text called with empty 'to'; skipping")
@@ -38,4 +36,45 @@ def send_text(to: str, body: str, preview_url: bool = False) -> str:
     }
     return _post(payload)["messages"][0]["id"]
 
+def confirm_text(body: str, toConfirm: str) -> bool:
+    if (str == toConfirm):
+        return True
+    else:
+        return False
 
+
+def send_two_buttons(to: str,
+                    question: str,
+                    yes_id: str,
+                    no_id: str,
+                    str1: str,
+                    str2: str) -> str:
+    if not to:
+        raise ValueError("send_two_buttons(): 'to' phone num is empty")
+
+    payload = {
+        "messaging_product": "whatsapp",
+        "to": to,
+        "type": "interactive",
+        "interactive": {
+            "type": "button",
+            "body": { "text": question },
+            "action": {
+                "buttons": [
+                    {
+                        "type": "reply",
+                        "reply": { "id": yes_id, "title": str1 }
+                    },
+                    {
+                        "type": "reply",
+                        "reply": { "id": no_id,  "title": str2 }
+                    }
+                ]
+            }
+        }
+    }
+    return _post(payload)["messages"][0]["id"]
+
+def sendDocTypeList():
+
+    
