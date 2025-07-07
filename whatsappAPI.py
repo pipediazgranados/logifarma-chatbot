@@ -75,6 +75,67 @@ def send_two_buttons(to: str,
     }
     return _post(payload)["messages"][0]["id"]
 
-def sendDocTypeList():
-
+def sendDocType(to: str, body: str):
+    if not to:
+        raise ValueError("sendDocType(): 'to' phone num is empty")
     
+    payload = {
+        "messaging_product": "whatsapp",
+        "to": to,
+        "type": "interactive",
+        "interactive": {
+            "type": "list",
+            "body": {
+            "text": body
+            },
+            "action": {
+            "button": "Tipos de Documento",
+            "sections": [
+                {
+                "title": "Tipo de Documento",
+                "rows": [
+                    { "id": "TI",   "title": "Tarjeta de Identidad" },
+                    { "id": "CC",   "title": "Cedula de Ciudadania"  },
+                    { "id": "AS",   "title": "Adulto Sin I.D."  },
+                    { "id": "CE",   "title": "Cedula de Extranjeria"  },
+                    { "id": "PT",   "title": "Permiso de Trabajo"  },
+                    { "id": "SC",   "title": "Salvoconducto"  },
+                    { "id": "RC",   "title": "Registro Civil"  }
+                    ]
+                    }
+                ]
+            }
+        }
+    }
+    return _post(payload)["messages"][0]["id"]
+
+def sendMenu(to: str, body:str):
+    if not to:
+        raise ValueError("sendDocType(): 'to' phone num is empty")
+    
+    payload = {
+        "messaging_product": "whatsapp",
+        "to": to,
+        "type": "interactive",
+        "interactive": {
+            "type": "list",
+            "body": {
+            "text": body
+            },
+            "action": {
+            "button": "Menu",
+            "sections": [
+                {
+                "title": "Menu",
+                "rows": [
+                    { "id": "ESTADO_MED",     "title": "Estado del Medicamento"  },
+                    { "id": "HORARIO_UBI",    "title": "Horarios"  },
+                    { "id": "MED_AUTORIZAR",  "title": "Medicamento a Domicilio"  },
+                    { "id": "OTROS",          "title": "Otros"  }
+                    ]
+                    }
+                ]
+            }
+        }
+    }
+    return _post(payload)["messages"][0]["id"]

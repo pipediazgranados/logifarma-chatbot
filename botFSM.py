@@ -6,15 +6,30 @@ from enum import auto
 from statemachine import State
 from statemachine import StateMachine
 
-from whatsappAPI import send_text, confirm_text, send_two_buttons
+from whatsappAPI import send_text, confirm_text, send_two_buttons, sendDocType, sendMenu
+
+ALLOWED = (
+        "Tarjeta de Identidad",
+        "Cédula de Ciudadanía",
+        "Cédula de Extranjería",
+        "Adulto Sin I.D.",
+        "Permiso de Trabajo",
+        "Salvoconducto",
+        "Registro Civil",
+        "TI", "CC", "AS", "CE", "PT", "SC", "RC",
+)
+ALLOWED_CASEFOLDED = {v.casefold() for v in ALLOWED}
 
 class ChatBot(StateMachine):
     #states
-    start   = State(initial=True)
-    welcome = State(enter="sendWelcome")
-    docType = State(enter="promptType")
-    docNum  = State()
-    idle    = State(final=True)  
+    start       = State(initial=True)
+    welcome     = State(enter="sendWelcome")
+    docType     = State(enter="promptType")
+    docNum      = State(enter="promptDocNum")
+    menu        = State(enter="promptMenu")
+    sscNum      = State(enter="promptSsc")
+    medState    = State()
+    idle        = State(final=True)  
 
     #guards
     def isYes(self, txt: str) -> bool:
@@ -23,14 +38,21 @@ class ChatBot(StateMachine):
     def isNo(self, txt:str) -> bool:
         return txt.lower() in {"no", "no", "No Acepto", "No acepto", "no Acepto", "no acepto"}
 
+    def isValidDocType(self, txt: str) -> bool:
+        return txt.strip().casefold() in ALLOWED_CASEFOLDED
+
     #transitions
-    trans_welcome = start.to(welcome)
+    trans_welcome   = start.to(welcome)
 
-    accept_terms = welcome.to(docType, cond="isYes")
-    reject_terms = welcome.to(idle, cond="isNo")
+    accept_terms    = welcome.to(docType, cond="isYes")
+    reject_terms    = welcome.to(idle, cond="isNo")
 
-    ask_doc_num  = docType.to(docNum)
-    finish       = docNum.to(idle)
+    ask_doc_num     = docType.to(docNum)
+    trans_menu      = docNum.to(menu)
+
+    ask_ssc         = menu.to(sscNum) 
+    
+    finish          = menu.to(idle)
 
     #constructor
     def __init__(self, sender: str):
@@ -41,8 +63,8 @@ class ChatBot(StateMachine):
     #on-enter
     def sendWelcome(self):
         question = (
-            "Hola!\n"
-            "Bienvenido al servicio al cliente WhatsApp de Logifarma.\n"
+            "Hola!\n\n"
+            "Bienvenido al servicio al cliente WhatsApp de Logifarma.\n\n"
             "Antes de iniciar, es necesario que aceptes los términos y "
             "condiciones de WhatsApp."
         )
@@ -57,37 +79,73 @@ class ChatBot(StateMachine):
         ) 
     
     def promptType(self):
-        send_text(self.sender, "Por favor ingrese su tipo de documento")
+        sendDocType(self.sender, "Por favor ingrese el tipo de documento")
+    
+    def promptDocNum(self):
+        send_text(self.sender, "Por favor ingrese el numero de documento")
+    
+    def promptMenu(self):
+        sendMenu(self.sender, "En que lo podemos ayudar?")
+    
+    def promptSsc(self):
+        send_text(self.sender, "Por favor ingrese su numero SSC")
 
     #event methods
-    def text_received(self, body: str):
+    def text_op(self, body: str):
         if self.current_state is self.start:
             self.trans_welcome()
-        return
-
-        if self.current_state is self.welcome:
-            if not self.accept_terms(body):
-                send("Finalizando conversacion")
             return
 
-        # if self.current_state is self.docType:
+        if self.current_state is self.welcome:
+            if self.isYes(body):
+                self.accept_terms(body)
+            elif self.isNo(body):
+                self.reject_terms(body)
+            else:
+                send_text(self.sender, "Responde Acepto o No Acepto, por favor.")
+            return
+
+        if self.current_state is self.docType:
+            if self.isValidDocType(body):
+                self.ask_doc_num(body)
+            else:
+                send_text(self.sender, "Ingrese un tipo de documento valido")
+            return
 
 
-
-
-    def button_pressed(self, btn_id: str):
+    def button_op(self, btn_id: str):
         if self.current_state is self.welcome:
             if self.isYes(btn_id):
                 self.accept_terms(btn_id)
-                # send_text(self.sender, "To docType")
             elif self.isNo(btn_id):
                 self.reject_terms(btn_id)
             else:
-                send_text(self.sender, "Por favor eliga Acepto o No Acepto.")
+                send_text(self.sender, "Por favor elige Acepto o No Acepto.")
             return
-
+        
     def list_op(self, row_id: str):
-        pass
+        if self.current_state is self.docType:
+            if self.isValidDocType(row_id):
+                self.ask_doc_num(row_id) 
+            else:
+                send_text(self.sender,
+                        "Por favor elige un tipo de documento válido.")
+        else:
+            self.unsupported()
 
-    def unsupported(self):
-        send_text(self.sender, "Lo siento, no entendí.")
+        def unsupported(self):
+            send_text(self.sender, "Lo siento, no entendí.")
+
+        if self.current_state is self.menu:
+            if row_id == "ESTADO_MED":
+
+            elif row_id == "HORARIO_UBI":
+                send_text(self.sender, "")
+            elif row_id == "MED_AUTORIZAR":
+                send_text(self.sender, "")
+            elif row_id == "OTROS":
+            
+            else: 
+                send_text(self.sender, "Por favor ingrese una opcion valida")
+
+            return
