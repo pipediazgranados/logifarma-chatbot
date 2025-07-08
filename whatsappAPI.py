@@ -94,13 +94,13 @@ def sendDocType(to: str, body: str):
                 {
                 "title": "Tipo de Documento",
                 "rows": [
-                    { "id": "TI",   "title": "Tarjeta de Identidad" },
                     { "id": "CC",   "title": "Cedula de Ciudadania"  },
-                    { "id": "AS",   "title": "Adulto Sin I.D."  },
+                    { "id": "TI",   "title": "Tarjeta de Identidad" },
+                    { "id": "RC",   "title": "Registro Civil"  },
                     { "id": "CE",   "title": "Cedula de Extranjeria"  },
-                    { "id": "PT",   "title": "Permiso de Trabajo"  },
+                    { "id": "PT",   "title": "PT"  },
                     { "id": "SC",   "title": "Salvoconducto"  },
-                    { "id": "RC",   "title": "Registro Civil"  }
+                    { "id": "AS",   "title": "Adulto Sin I.D."  },
                     ]
                     }
                 ]

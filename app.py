@@ -33,9 +33,9 @@ def incoming():
     bot = machines.setdefault(sender, ChatBot(sender=sender))
 
     if msg_type == "text":
-        bot.text_received(value)
+        bot.text_op(value)
     elif msg_type == "button":
-        bot.button_pressed(value)
+        bot.button_op(value)
     elif msg_type == "list":
         bot.list_op(value)
     else:

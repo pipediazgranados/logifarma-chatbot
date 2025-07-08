@@ -1,4 +1,5 @@
 import random
+import re
 
 from enum import Enum
 from enum import auto
@@ -19,6 +20,10 @@ ALLOWED = (
         "TI", "CC", "AS", "CE", "PT", "SC", "RC",
 )
 ALLOWED_CASEFOLDED = {v.casefold() for v in ALLOWED}
+
+TEN_RE = re.compile(r"^\d{10}$")
+EIGHT_RE = re.compile(r"^\d{1,8}$")
+CLEAN_RE = re.compile(r"[.\-\s]")
 
 class ChatBot(StateMachine):
     #states
@@ -41,18 +46,30 @@ class ChatBot(StateMachine):
     def isValidDocType(self, txt: str) -> bool:
         return txt.strip().casefold() in ALLOWED_CASEFOLDED
 
-    #transitions
-    trans_welcome   = start.to(welcome)
-
-    accept_terms    = welcome.to(docType, cond="isYes")
-    reject_terms    = welcome.to(idle, cond="isNo")
-
-    ask_doc_num     = docType.to(docNum)
-    trans_menu      = docNum.to(menu)
-
-    ask_ssc         = menu.to(sscNum) 
+    def isClean(self, raw: str) -> str:
+        return CLEAN_RE.sub("", raw)
     
-    finish          = menu.to(idle)
+    def isTenDigits(self, txt: str) -> bool:
+        digits = txt.strip()
+        return digits.isdigit() and len(digits) == 10
+
+    def isEightDigits(self, txt: str) -> bool:
+        digits = txt.strip()
+        return digits.isdigit() and len(digits) <= 8
+    
+    #transitions
+    toWelcome   = start.to(welcome)
+
+    toYesTerms  = welcome.to(docType, cond="isYes")
+    toNoTerms   = welcome.to(idle, cond="isNo")
+
+    toDocNum    = docType.to(docNum)
+    toMenu      = docNum.to(menu)
+
+    toSsc       = menu.to(sscNum) 
+    toMedState  = sscNum.to(medState)
+   
+    toIdle      = medState.to(idle)
 
     #constructor
     def __init__(self, sender: str):
@@ -93,32 +110,41 @@ class ChatBot(StateMachine):
     #event methods
     def text_op(self, body: str):
         if self.current_state is self.start:
-            self.trans_welcome()
+            self.toWelcome()
             return
 
         if self.current_state is self.welcome:
             if self.isYes(body):
-                self.accept_terms(body)
+                self.toYesTerms(body)
             elif self.isNo(body):
-                self.reject_terms(body)
+                self.toNoTerms(body)
             else:
                 send_text(self.sender, "Responde Acepto o No Acepto, por favor.")
             return
 
         if self.current_state is self.docType:
             if self.isValidDocType(body):
-                self.ask_doc_num(body)
+                self.toDocNum(body)
             else:
                 send_text(self.sender, "Ingrese un tipo de documento valido")
             return
+        
+        if self.current_state is self.docNum:
+            clean = self.isClean(body)
 
+            if self.isTenDigits(clean):
+                self.toMenu(clean)
+            elif self.isEightDigits(clean):
+                self.toMenu(clean)
+            else:
+                send_text(self.sender, "Ingrese un numero de documento valido")
 
     def button_op(self, btn_id: str):
         if self.current_state is self.welcome:
             if self.isYes(btn_id):
-                self.accept_terms(btn_id)
+                self.toYesTerms(btn_id)
             elif self.isNo(btn_id):
-                self.reject_terms(btn_id)
+                self.toNoTerms(btn_id)
             else:
                 send_text(self.sender, "Por favor elige Acepto o No Acepto.")
             return
@@ -126,7 +152,7 @@ class ChatBot(StateMachine):
     def list_op(self, row_id: str):
         if self.current_state is self.docType:
             if self.isValidDocType(row_id):
-                self.ask_doc_num(row_id) 
+                self.toDocNum(row_id) 
             else:
                 send_text(self.sender,
                         "Por favor elige un tipo de documento válido.")
@@ -138,14 +164,13 @@ class ChatBot(StateMachine):
 
         if self.current_state is self.menu:
             if row_id == "ESTADO_MED":
-
+                self.toSsc(row_id)
             elif row_id == "HORARIO_UBI":
                 send_text(self.sender, "")
             elif row_id == "MED_AUTORIZAR":
                 send_text(self.sender, "")
             elif row_id == "OTROS":
-            
+                send_text(self.sender, "Redirigiendo a asesor")
             else: 
                 send_text(self.sender, "Por favor ingrese una opcion valida")
-
             return
