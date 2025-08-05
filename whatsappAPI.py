@@ -10,6 +10,31 @@ ACCESS_TOKEN = os.getenv("WA_TOKEN")
 API_ROOT     = f"https://graph.facebook.com/v19.0/{PHONE_ID}/messages"
 HEADERS      = {"Authorization": f"Bearer {ACCESS_TOKEN}",
                 "Content-Type": "application/json"}
+AGENTS = os.getenv("HUMAN_AGENTS", "").split(",")
+
+def send_chatwoot_reply(convo_id: int, text: str):
+    # Local import avoids circular dependency
+    from chatwootWebhook import _cw_api as cw_api
+    cw_api(
+        f"/conversations/{convo_id}/messages",
+        method="POST",
+        json={
+            "content": text,
+            "message_type": "outgoing",
+            "content_type": "text",
+        },
+    )
+
+def notify_agent(user_phone: str, doc_num: str):
+    """Ping all agents when a hand‑off starts."""
+    body = f"⚠️ Nuevo chat 👉 {user_phone}  (doc {doc_num})"
+    for a in filter(None, AGENTS):
+        send_text(a, body)
+
+def forward_to_agent(user_phone: str, text: str):
+    """Relay every customer message to the agents."""
+    for a in filter(None, AGENTS):
+        send_text(a, f"[{user_phone}] {text}")
 
 def _post(payload:dict) -> dict:
     resp = requests.post(API_ROOT, headers=HEADERS, data=json.dumps(payload))
