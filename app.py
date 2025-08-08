@@ -24,6 +24,10 @@ if not all((WA_PHONE_ID, WA_TOKEN)):
 app = Flask(__name__)
 machines: dict[str, ChatBot] = {}
 
+if __name__ == "__main__":
+    app.register_blueprint(cw_bp)
+    app.run(port=5000, debug=True)
+
 def cleanup_old_machines():
     cutoff = datetime.now() - MACHINE_TIMEOUT
     expired = [k for k, v in machine_timestamps.items() if v < cutoff]
@@ -71,7 +75,7 @@ def incoming():
     except Exception as e:
         print(f"Webhook error: {e}")
         return "Internal error", 500
-
-if __name__ == "__main__":
-    app.register_blueprint(cw_bp)
-    app.run(port=5000, debug=True)
+    
+@app.route("/ping")
+def ping():
+    return "pong", 200
